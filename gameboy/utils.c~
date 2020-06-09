@@ -1,0 +1,68 @@
+#include "gba.h"
+#include "utils.h"
+#include "8x8.til"
+
+#define COLOR_WHITE BGR(31,31,31)
+#define COLOR_BLACK 0
+#define FONT_SIZE 8
+
+static int x, y;
+static hword color = COLOR_WHITE;
+
+typedef int fix;
+
+void setcolor(hword col)
+{
+	color = col;
+}
+
+void locate(int posi_x, int posi_y)
+{
+	x = posi_x;
+	y = posi_y;
+}
+
+void
+draw_char(int code)
+{
+        hword *p, *ptr;
+        int i, j;
+	unsigned char *font = char8x8[code];
+	ptr = (hword*)VRAM + LCD_WIDTH * y + x;
+
+        for(i = 0; i < FONT_SIZE; i++){
+                p = ptr + LCD_WIDTH * i;
+ 	        for(j = FONT_SIZE - 1; j >= 0; j--, p++){
+                        if(font[i] & (1 << j) )
+				*p = color;
+                }
+        }
+}
+
+void putchar(int c)
+{
+	draw_char(c);
+	x += FONT_SIZE;
+}
+
+void putstr(char *c)
+{
+	int i;
+	i = 0;
+	while(c[i]  != '\0'){
+		putchar(c[i]);
+		i++;
+	}
+}
+
+int fix2int(fix f){
+	return (f + 0x80) >> 8;
+}
+
+fix int2fix(int i){
+	return (fix)i << 8;
+}
+
+fix mulff(fix f1, fix f2){
+	return f1 * fix2int(f2);
+}

@@ -1,0 +1,94 @@
+#include "gba.h"
+#inclde	"utils.h"
+#include "game.h"
+#include "box.h"
+
+static enum state current_state; // 現在の状態
+
+enum state game_get_state(void){ return current_state; }
+
+void game_set_state(enum state new_state)
+{
+	current_state = new_state;
+}
+
+void game_step(void)
+{
+	int key;
+	key = gba_register(KEY_STATUS);
+
+	switch (game_get_state()){
+	case START:
+		if (! (key & KEY_START)){
+			while(1){
+				key = gba_register(KEY_STATUS);
+				if(key & KEY_START) break;
+			}
+			game_set_state(RUNNING);
+		}
+		break;
+	case RUNNING:
+		if(! (key & KEY_SELECT)){
+			while(1){
+				key = gba_register(KEY_STATUS);
+				if(key & KEY_SELECT) break;
+			}
+			game_set_state(STOP);
+		}
+		break;
+	case STOP:
+		setcolor(BGR(31,31,31));
+                locate(105, 110);
+                putstr("STOP");
+		if (! (key & KEY_SELECT)){
+			while(1){
+                                key = gba_register(KEY_STATUS);
+				if(key & KEY_SELECT) break;
+			}
+			setcolor(0);
+                        locate(105, 110);
+                        putstr("STOP");
+			game_set_state(RUNNING);
+		}
+		break;
+	case DEAD:
+		setcolor(BGR(31,0,0));
+                locate(85, 110);
+                putstr("GAME OVER");
+		if (! (key & KEY_START)) {
+			while(1){
+                                key = gba_register(KEY_STATUS);
+				if(key & KEY_START) break;
+			}
+			setcolor(0);
+                        locate(85, 110);
+                        putstr("GAME OVER");
+			game_set_state(RESTART);
+		}
+		break;
+	case RESTART:
+		if (! (key & KEY_START)){
+			while(1){
+                                key = gba_register(KEY_STATUS);
+				if(key & KEY_START) break;
+			}
+			game_set_state(RUNNING);
+       		}
+		break;
+	case CLEAR:
+		setcolor(BGR(31,31,0));
+                locate(85, 110);
+                putstr("GAME CLEAR");
+		if (! (key & KEY_START)){
+			while(1){
+                                key = gba_register(KEY_STATUS);
+				if(key & KEY_START) break;
+			}
+			setcolor(0);
+                        locate(85, 110);
+                        putstr("GAME CLEAR");
+			game_set_state(RESTART);
+		}
+		break;
+	}
+}

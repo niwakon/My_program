@@ -1,0 +1,62 @@
+#include "gba.h"
+#include "utils.h"
+#include "box.h"
+
+#define COLOR_WHITE     BGR(31, 31, 31)
+#define COLOR_BLACK     0
+#define COLOR_RED       BGR(0, 0, 30)
+#define COLOR_GREEN     BGR(0, 30, 0)
+#define COLOR_BLUE      BGR(30, 0, 0)
+#define COLOR_YELLOW    BGR(0, 30, 30)
+#define COLOR_AQUA      BGR(30, 30, 0)
+
+void draw_box(struct box *b, int x, int y, hword color)
+{
+        hword *base, *d;
+        int w, h;
+
+        base = (hword*)VRAM + LCD_WIDTH * y + x;
+
+        for(h = b->height; h > 0; h--){
+                d = base;
+                for(w = b->width; w > 0; w--)
+                        *(d++) = color;
+                base += LCD_WIDTH;
+        }
+
+        b->x = x;
+        b->y = y;
+}
+
+void move_box(struct box *b, int x, int y, hword color)
+{
+        draw_box(b, b->x, b->y, COLOR_BLACK);
+        draw_box(b, x, y, color);
+}
+
+int cross(struct box *ball, struct box *b2)
+{
+	if(ball->y <= (b2->y + b2->height) && (ball->y + ball->height) >= b2->y){
+		if(ball->x <= (b2->x + b2->width) && (ball->x + ball->width) >= b2->x){
+			return 1;
+		}
+	}
+	return 0;
+}
+
+int fcross(struct fbox *ball, struct box *b)
+{
+	// それぞれintをfixに変えて足し引き算して
+	fix b_y, b_h, b_x, b_w;
+	b_y = int2fix(b->y);
+	b_h = int2fix(b->height);
+	b_x = int2fix(b->x);
+	b_w = int2fix(b->width);
+	if(ball->y <= (b_y + b_h) && (ball->y + ball->height) >= b_y){
+                if(ball->x <= (b_x + b_w) && (ball->x + ball->width) >= b_x){
+                        return 1;
+                }
+        }
+        return 0;
+}
+	

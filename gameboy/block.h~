@@ -1,0 +1,1 @@
+extern void block_step(int sprite_num);

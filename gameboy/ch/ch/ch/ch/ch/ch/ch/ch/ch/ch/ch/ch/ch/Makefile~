@@ -1,0 +1,14 @@
+all: game.bin
+
+crt.o: crt.S
+	gcc-arm -c crt.S
+
+game.o: game.c
+	gcc-arm -c game.c
+
+game.bin: game.o crt.o
+	ld-arm -o game.out -T gcc.ls crt.o game.o
+	objcopy-arm -O binary game.out game.bin
+
+clean:
+	/bin/rm -f *.o *.bin *.out

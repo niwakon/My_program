@@ -1,0 +1,80 @@
+#include "gba.h"
+#include "utils.h"
+#include "box.h"
+#include "ball.h"
+#include "game.h"
+#include "bullet.h"
+#include "racket.h"
+#include "block.h"
+#include "sprite.h"
+
+#define COLOR_WHITE     BGR(31, 31, 31)
+#define COLOR_BLACK     0
+
+void wait_until_vblank(void)
+{
+	while((gba_register(LCD_STATUS) & 1) == 0);
+}
+
+void wait_while_vblank(void)
+{
+	while((gba_register(LCD_STATUS) & 1));
+}
+
+void wait_until(hword time)
+{
+	while(time != gba_register(TMR_COUNT0)) ;
+}
+
+void delay(hword val)
+{
+        wait_until(gba_register(TMR_COUNT0) + val);
+}
+
+main()
+{
+        gba_register(LCD_CTRL) = LCD_BG2EN | LCD_MODE3;
+
+        gba_register(TMR_COUNT0) = 0;
+        gba_register(TMR_CTRL0 ) = TMR_ENABLE + TMR_1024CLOCK;
+
+	extern character whiteball[];
+	extern character racket_ch[];
+	extern character enemy1[];
+	extern character enemy2[];
+	
+	int cnum, ball_sprite, racket_sprite, enemy_sprite, sprite_num, i;
+	sprite_num = 0;
+	init_sprite();
+	// 自機の登録
+	cnum = sprite_register(racket_ch, 4) + 512;
+        racket_sprite = sprite_num;
+        sprite_setup(racket_sprite, OBJ_32x8, PRIORITY_1ST, cnum);
+        sprite_num++;
+	// ボールの登録
+	cnum = sprite_register(whiteball, 1) + 512;
+	ball_sprite = sprite_num;
+	sprite_setup(ball_sprite, OBJ_8x8, PRIORITY_1ST, cnum);
+	sprite_num++;
+        // 自機の弾の登録
+	for(i = 0; i < MAX_BULLET; i++){
+                sprite_setup(sprite_num, OBJ_8x8, PRIORITY_1ST, cnum);
+                sprite_num++;
+        }
+        // エネミー登録
+	enemy_sprite = sprite_num;
+	cnum = sprite_register(enemy2, 8) + 512;
+	for(i = 0; i < MAX_ENEMY; i++){
+		sprite_setup(sprite_num, OBJ_32x16, PRIORITY_1ST, cnum);
+                sprite_num++;
+        }
+	
+	while(1){
+		wait_until_vblank();
+		//ball_step(ball_sprite);
+                racket_step(racket_sprite);
+		block_step(enemy_sprite);
+		game_step();
+		wait_while_vblank();
+	}
+}

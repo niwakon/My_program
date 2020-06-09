@@ -1,0 +1,129 @@
+#include "gba.h"
+#define COLOR_WHITE     BGR(31, 31, 31)
+#define COLOR_BLACK     0
+#define COLOR_RED       BGR(0, 0, 30)
+#define COLOR_GREEN     BGR(0, 30, 0)
+#define COLOR_BLUE      BGR(30, 0, 0)
+#define COLOR_YELLOW    BGR(0, 30, 30)
+#define COLOR_AQUA      BGR(30, 30, 0)
+
+struct box {
+	int x, y;
+	int width, height;
+};
+
+void wait(int val)
+{
+	int i,j;
+	for(i = 0; i < val; i++){
+		for(j = 0; j < val; j++){}
+	}
+}
+
+void draw_box(struct box *b, int x, int y, hword color)
+{
+	hword *base, *d;
+	int w, h;
+
+	base = (hword*)VRAM + LCD_WIDTH * y + x;
+
+	for(h = b->height; h > 0; h--){
+		d = base;
+		for(w = b->width; w > 0; w--)
+			*(d++) = color;
+		base += LCD_WIDTH;
+	}
+
+	b->x = x;
+	b->y = y;
+}
+
+void move_box(struct box *b, int x, int y, hword color)
+{
+	draw_box(b, b->x, b->y, COLOR_BLACK);
+	draw_box(b, x, y, color);
+}
+
+void draw_ball(struct box *b, int x, int y, hword color, int time)
+{
+	delay(time);
+	move_box(b, x, y, color);
+}
+
+void delay(hword val)
+{
+	val += gba_register(TMR_COUNT0);
+	while( val != gba_register(TMR_COUNT0) );
+	void delay(hword val)
+	{
+		val += gba_register(TMR_COUNT0);
+		while( val != gba_register(TMR_COUNT0) );
+	}
+
+
+	main()
+	{
+		hword *fb = (hword*)VRAM;
+		gba_register(LCD_CTRL) = LCD_BG2EN | LCD_MODE3;
+
+		gba_register(TMR_COUNT0) = 0;
+		gba_register(TMR_CTRL0 ) = TMR_ENABLE + TMR_1024CLOCK;
+		hword val = 0xffff;
+
+		int key, mx, my, time;
+		struct box bord = { .x = 0, .y = 120, .width = 50, .height = 5 };
+		move_box(&bord, bord.x, bord.y, COLOR_WHITE);
+
+		struct box ball = { .x = 120, .y = 0, .width = 5, .height = 5 };
+		move_box(&ball, ball.x, ball.y, COLOR_WHITE);}
+
+
+main()
+{
+	hword *fb = (hword*)VRAM;
+	gba_register(LCD_CTRL) = LCD_BG2EN | LCD_MODE3;
+
+	gba_register(TMR_COUNT0) = 0;
+	gba_register(TMR_CTRL0 ) = TMR_ENABLE + TMR_1024CLOCK;
+	hword val = 0xffff;
+
+	int key, mx, my, time;
+        struct box bord = { .x = 0, .y = 120, .width = 50, .height = 5 };
+	move_box(&bord, bord.x, bord.y, COLOR_WHITE);
+
+	struct box ball = { .x = 120, .y = 0, .width = 5, .height = 5 };
+	move_box(&ball, ball.x, ball.y, COLOR_WHITE);
+
+	mx = 1;
+	my = 1;
+	for(;;){
+		time = 50;
+		key = gba_register(KEY_STATUS);
+
+		if( !(key & KEY_R) ){
+			time = 10;
+		}
+		
+		if( !(key & KEY_L) ){
+			time = 100;
+	        }
+
+		if( !(key & KEY_LEFT) ){
+			if(bord.x > 0) move_box(&bord, bord.x - 1, bord.y, COLOR_WHITE);
+		}
+
+		if( !(key & KEY_RIGHT) ){
+			if(bord.x < 240 - bord.width) move_box(&bord, bord.x + 1, bord.y, COLOR_WHITE);
+		} 
+
+		if( !(key & KEY_START) ){}
+
+
+		draw_ball(&ball, ball.x + mx, ball.y + my, COLOR_WHITE, time);
+		if(ball.x == 240 || ball.x == 0) mx *= -1;
+		if(ball.y == 160 || ball.y == 0) my *= -1;
+
+		//wait(time);
+		//	delay(10);
+	}
+}

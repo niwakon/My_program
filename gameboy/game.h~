@@ -1,0 +1,7 @@
+enum state {START, RUNNING, DEAD, RESTART, CLEAR, STOP};  
+extern void game_step(void);             // 1ティックの動作を行なう．
+extern enum state game_get_state(void);  // 今の状態を問い合わせる．
+extern void game_set_state(enum state);  // 状態を変更する．
+#define MAX_BULLET 100
+#define MAX_ENEMY 1
+#define ENEMY_BULLET 10

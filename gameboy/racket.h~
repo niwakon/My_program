@@ -1,0 +1,2 @@
+extern void racket_step(int sprite_num);
+extern void hit_enemy(struct bullet &bu);

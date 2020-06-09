@@ -1,0 +1,31 @@
+/Users/Tatsuhiro/kumikomios/lib/gcc-lib/arm-gba-elf/3.3.2/libgcc.aAS     = as-arm
+CC     = gcc-arm
+LIBGCC = `gcc-arm -print-libgcc-file-name`
+CFLAGS = -Wall -O -fno-builtin -fomit-frame-pointer -finhibit-size-directive \
+        -fno-ident
+
+all: racket.bin
+
+racket.bin: game.o ball.o box.o crt.o main.o racket.o block.o utils.o sprite.o whiteball.o objpal.o racket_ch.o bullet.o enemy1.o enemy2.o
+        ld-arm -o racket.out -T gcc.ls \
+          crt.o game.o ball.o box.o main.o racket.o block.o utils.o sprite.o whiteball.o objpal.o racket_ch.o bullet.o enemy1.o enemy2.o ${LIBGCC} /home/lecture/kumikomios/lib/gcc-lib/arm-gba-elf/3.3.2/libgcc.a
+        objcopy-arm -O binary racket.out racket.bin
+
+clean:
+        rm -f *.o *.s *.out *.bin
+
+game.o: gba.h utils.h game.h box.h
+ball.o: gba.h utils.h box.h game.h ball.h block.h sprite.h
+box.o: gba.h utils.h box.h
+main.o: gba.h utils.h ball.h box.h racket.h game.h block.h sprite.h
+block.o: gba.h utils.h ball.h box.h racket.h game.h racket.h bullet.h block.h
+racket.o: gba.h utils.h box.h ball.h racket.h game.h ball.h sprite.h bullet.h block.h
+utils.o: gba.h utils.h
+sprite.o: gba.h sprite.h
+whiteball.o: gba.h
+racket_ch.o: gba.h
+objpal.o: gba.h
+bullet.o: gba.h utils.h box.h sprite.h bullet.h
+enemy1.o: gba.h
+enemy2.o: gba.h
+

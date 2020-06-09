@@ -1,0 +1,108 @@
+#include "gba.h"
+#include "utils.h"
+#include "box.h"
+#include "ball.h"
+#include "game.h"
+#include "block.h"
+#include "sprite.h"
+
+#define COLOR_WHITE     BGR(31, 31, 31)
+#define COLOR_BLACK     0
+#define COLOR_AQUA      BGR(31, 31, 0)
+#define SPEED           2
+
+static fix dx;
+static fix dy;
+
+static int init = 1;
+static int ball_sprite;
+
+static struct fbox b;          /* ボールの箱の現在の位置 */
+
+extern character whiteball[]; // スプライト用
+
+extern struct box bord;
+extern struct box block;
+extern struct box block2;
+
+fix ball_get_dy(void) { return dy; }
+void ball_set_dy(fix new_dy) { dy = new_dy; }
+fix ball_get_dx(void) { return dx;}
+void ball_set_dx(fix new_dx) { dx = new_dx; }
+void ball_mul_dx(int mul_dx) { dx *= mul_dx; }
+void ball_mul_dy(int mul_dy) { dy *= mul_dy; }
+void ball_add_x(int new_x)
+{
+	fix add_x = int2fix(new_x);
+	if(fix2int(b.x + add_x) < 240){
+		b.x += add_x;
+		sprite_move(ball_sprite, fix2int(b.x), fix2int(b.y));
+	}else{
+		b.x = int2fix(239);
+		sprite_move(ball_sprite, fix2int(b.x), fix2int(b.y));
+	}
+}
+void ball_add_y(int add_y) {
+	b.y = int2fix(add_y);
+	sprite_move(ball_sprite, fix2int(b.x), fix2int(b.y));
+}
+struct fbox *ball_get_box(void) { return &b; }
+
+void ball_step(int num_sprite)
+{
+    ball_sprite = num_sprite;
+	switch(game_get_state()){
+	case START:
+		b.width = 8;
+                b.height = 8;
+		b.x = int2fix(bord.x + (bord.width - b.width) / 2);
+		b.y = int2fix(bord.y - bord.height);
+		dy = int2fix(-SPEED);
+		dx = int2fix(SPEED);
+
+                // スプライト
+		if(init){
+			sprite_move(ball_sprite, fix2int( b.x), fix2int(b.y));
+			sprite_display(ball_sprite, OBJ_TURNON);
+			init = 0;
+		}
+		
+		break;
+	case RUNNING:
+		b.x += dx;
+		b.y += dy;
+		sprite_move(ball_sprite, fix2int(b.x), fix2int(b.y));
+		
+		if(fix2int(b.x) + b.width >= 240 || fix2int(b.x) <= 0){
+			if(fix2int(b.x) <= 0){
+				b.x = -dx;
+				sprite_move(ball_sprite, fix2int(b.x), fix2int(b.y));
+			}else{
+				b.x = int2fix(240 - b.width) - dx;
+				sprite_move(ball_sprite, fix2int(b.x), fix2int(b.y));
+			}
+			dx *= -1;
+		}
+		if(fix2int(b.y) <= 0) {
+			b.y = -dy;
+			sprite_move(ball_sprite, fix2int(b.x), fix2int(b.y));
+			if(fix2int(dy) < 0) dy *= -1;
+		}
+		//if(fix2int(b.y) > 160) game_set_state(DEAD);
+		break;
+	case STOP:
+		break;
+	case DEAD:
+		break;
+	case CLEAR:
+		sprite_move(ball_sprite, fix2int(b.x), fix2int(b.y));
+		break;
+	case RESTART:
+                b.x = int2fix(bord.x + (bord.width - b.width) / 2);
+                b.y = int2fix(bord.y - bord.height);
+                dy = int2fix(-SPEED);
+                dx = int2fix(SPEED);
+		sprite_move(ball_sprite, fix2int(b.x), fix2int(b.y));
+		break;
+	}
+}

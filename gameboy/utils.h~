@@ -1,0 +1,8 @@
+void locate(int x, int y);
+void putchar(int c);
+void setcolor(hword color);
+void putstr(char *c);
+typedef int fix;
+int fix2int(fix f);
+fix int2fix(int i);
+fix mulff(fix f1, fix f2);

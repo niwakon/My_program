@@ -1,0 +1,158 @@
+#include "gba.h"
+#include "utils.h"
+#include "box.h"
+#include "game.h"
+#include "ball.h"
+#include "bullet.h"
+#include "sprite.h"
+#include "racket.h"
+
+#define COLOR_WHITE     BGR(31, 31, 31)
+#define COLOR_BLACK     0
+#define COLOR_YELLOW    BGR(31, 31, 0)
+#define SPEED           4
+
+static int key;
+static int dx;
+static int racket_sprite;
+static int num_bullet;
+static int A_wait_flag;
+
+struct box bord = { .x = 95, .y = 130, .width = 32, .height = 8 };
+static struct fbox *ball;
+
+struct bullet bullets[MAX_BULLET];
+
+static void hit_enemy(struct bullet *b)
+{
+	not_display_bullet(b);
+	num_bullet++;
+}
+
+static int hit(int x, int y)
+{
+	int val = 1;
+	int ball_w, ball_h;
+	ball_w = fix2int(ball->width);
+	ball_h = fix2int(ball->height);
+
+	if(x + ball_w <= bord.x + 3  && y + ball_h > bord.y + 1){
+		val = 3;
+	}else if(x >= bord.x + bord.width - 3 && y + ball_h > bord.y + 1){
+		val = 2;
+	}
+
+	if(val == 1 && y + ball_h > bord.y && y <= bord.y + bord.height ){
+                ball_add_y(bord.y - ball_h);
+        }
+	return val;
+}
+
+void racket_step(int num_sprite)
+{
+    int i;
+    racket_sprite = num_sprite;
+    switch(game_get_state()){
+	case START:
+		dx = SPEED;
+		sprite_move(racket_sprite, bord.x, bord.y);
+		sprite_display(racket_sprite, OBJ_TURNON);
+		ball = ball_get_box();
+
+		A_wait_flag = 0;
+
+		num_bullet = MAX_BULLET;
+		for(i = 0; i < MAX_BULLET; i++){
+			struct box shot = { fix2int(ball->x), fix2int(ball->y), 8,  8 };
+			bullets[i].dx = 0;
+			bullets[i].dy = -1;
+			bullets[i].sprite = 2 + i;
+			bullets[i].flag = 0;
+			bullets[i].bul = shot;
+		}
+		break;
+	case RUNNING:
+		key = gba_register(KEY_STATUS);
+	
+		if( !(key & KEY_LEFT) ){
+			if(bord.x > dx){
+				bord.x -= dx;
+				sprite_move(racket_sprite, bord.x, bord.y);
+			}
+		}
+
+		if( !(key & KEY_RIGHT) ){
+			if(bord.x < 240 - bord.width - dx){
+				bord.x += dx;
+				sprite_move(racket_sprite, bord.x, bord.y);
+			}
+		}
+
+		if( !(key & KEY_A) ){
+			// 弾数が残っていれば打つ
+			if(num_bullet > 0 && !A_wait_flag){
+				A_wait_flag = 1;
+				for(i = 0; i < MAX_BULLET; i++){
+					// 弾をうつ
+					if(bullets[i].flag == 0){
+						bullets[i].flag = 1;
+						display_bullet(&bullets[i], bord.x + bord.width / 2, bord.y);
+						num_bullet--;
+						break;
+					}
+				}
+			}
+		}else if(key & KEY_A){
+			A_wait_flag = 0;
+		}
+
+		// フラグが立っている弾を移動させる
+		for(i = 0; i < MAX_BULLET; i++){
+			if(bullets[i].flag){
+				move_bullet(&bullets[i]);
+				if(bullets[i].flag == 0) {
+					num_bullet++;
+				}
+			}
+		}
+		
+		if( fcross(ball, &bord)){
+			switch( hit(fix2int(ball->x), fix2int(ball->y)) ){
+			case 1:
+				if(ball_get_dy() > 0) ball_mul_dy(-1);
+				break;
+			case 2:
+				if(ball_get_dy() > 0) ball_mul_dy(-1);
+				if(ball_get_dx() < 0) ball_mul_dx(-1);
+				break;
+			case 3:
+				if(ball_get_dy() > 0) ball_mul_dy(-1);
+				if(ball_get_dx() > 0) ball_mul_dx(-1);
+				break;
+			default:
+				break;
+			}
+		}
+		break;
+	case STOP:
+		break;
+	case DEAD:
+		break;
+	case CLEAR:
+		 for(i = 0; i < MAX_BULLET; i++){
+                        if(bullets[i].flag) not_display_bullet(&bullets[i]);
+                }
+		break;
+	case RESTART:
+		bord.x = 95;
+		bord.y = 130;
+		sprite_move(racket_sprite, bord.x, bord.y);
+		/*for(i = 0; i < MAX_BULLET; i++){
+			if(bullets[i].flag) not_display_bullet(&bullets[i].flag);
+			}*/
+		break;
+	}
+}
+
+
+

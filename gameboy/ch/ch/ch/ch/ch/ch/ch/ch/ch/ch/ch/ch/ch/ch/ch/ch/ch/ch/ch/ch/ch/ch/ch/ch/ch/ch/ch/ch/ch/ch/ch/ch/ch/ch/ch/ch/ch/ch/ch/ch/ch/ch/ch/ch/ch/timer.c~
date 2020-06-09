@@ -1,0 +1,88 @@
+#include "gba.h"
+#include "8x8.til"
+
+#define COLOR_WHITE     BGR(31, 31, 31)
+#define COLOR_BLACK     0
+#define COLOR_RED       BGR(0, 0, 30)
+#define COLOR_GREEN     BGR(0, 30, 0)
+#define COLOR_BLUE      BGR(30, 0, 0)
+#define COLOR_YELLOW    BGR(0, 30, 30)
+#define COLOR_AQUA      BGR(30, 30, 0)
+#define FONT_SIZE 8
+
+void
+draw_char(hword *ptr, hword color, int code)
+{
+        hword *p;
+        int i, j;
+        unsigned char *font = char8x8[code];
+
+        for(i = 0; i < FONT_SIZE; i++){
+                p = ptr + LCD_WIDTH * i;
+                for(j = FONT_SIZE - 1; j >= 0; j--, p++){
+                        if(font[i] & (1 << j) )
+                                *p = color;
+                }
+        }
+}
+
+int getStr(char *val)
+{
+        int num = 0;
+        while(val[num] != '\0'){
+                num++;
+        }
+        return num;
+}
+
+void draw_str(hword *ptr, hword color, char *code, int height, int width)
+{
+        int a;
+        for(a = 0; a < getStr(code) ; a++){
+                draw_char(ptr + (LCD_WIDTH * height) + width + a * FONT_SIZE, color, code[a]);
+        }
+}
+
+void delay(hword val)
+{
+        val += gba_register(TMR_COUNT0);
+        while( val != gba_register(TMR_COUNT0) );
+}
+
+
+main()
+{
+        hword *fb = (hword*)VRAM;
+        gba_register(LCD_CTRL) = LCD_BG2EN | LCD_MODE3;
+
+        gba_register(TMR_COUNT0) = 0;
+        gba_register(TMR_CTRL0 ) = TMR_ENABLE + TMR_1024CLOCK;
+        hword val = 0xffff;
+	
+        int start, height, width, key, i;
+	char time[9] = "00:00:00";
+
+	height = 90;
+	width = 140;
+	start = 0;
+	for(;;){
+                key = gba_register(KEY_STATUS);
+
+                if( !(key & KEY_START) ){
+			if(start) start = 1;
+			else start = 0;
+		}
+		if(start == 1){
+			time[0] = (char) time[0] + 1;
+			for(i = 0; i < 8; i++){
+				if(i == 2 || i == 5) continue; 
+				if( time[i] = (char) '9' + 1){
+					time[i] = 0;
+					time[i + 1] = (char)time[i + 1] + 1;
+				}
+			} 
+		}
+		draw_str(fb, COLOR_WHITE, time, height, width);
+                delay(1);
+        }
+}

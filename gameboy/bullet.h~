@@ -1,0 +1,7 @@
+struct bullet{
+        int dx, dy, sprite, flag, num_bullet;
+        struct box bul;
+};
+extern void display_bullet(struct bullet *b, int x, int y);
+extern void not_display_bullet(struct bullet *b);
+extern void move_bullet(struct bullet *b);

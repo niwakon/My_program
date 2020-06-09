@@ -1,0 +1,30 @@
+#include "gba.h"
+#include "utils.h"
+#include "box.h"
+#include "sprite.h"
+#include "bullet.h"
+
+void display_bullet(struct bullet *bu, int x, int y)
+{
+	bu->bul.x = x;
+	bu->bul.y = y;
+	sprite_display(bu->sprite, OBJ_TURNON);
+}
+
+void not_display_bullet(struct bullet *bu)
+{
+	sprite_display(bu->sprite, OBJ_TURNOFF);
+	bu->flag = 0;
+}
+
+void move_bullet(struct bullet *bu)
+{
+	int x, y;
+	x = (bu->bul.x += bu->dx);
+	y = (bu->bul.y += bu->dy);
+	sprite_move(bu->sprite, x, y);
+
+	if(x + bu->bul.width < 0 || x >240 || y + bu->bul.height < 0 || y > 160){
+		not_display_bullet(bu);
+	}
+}

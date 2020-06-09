@@ -1,0 +1,169 @@
+#include "gba.h"
+#include "utils.h"
+#include "ball.h"
+#include "game.h"
+#include "box.h"
+#include "racket.h"
+#include "bullet.h"
+#include "block.h"
+
+#define COLOR_WHITE     BGR(31, 31, 31)
+#define COLOR_BLACK     0
+#define COLOR_RED       BGR(31, 0, 0)
+#define COLOR_GREEN     BGR(0, 31, 0)
+#define COLOR_BLUE      BGR(0, 0, 31)
+#define COLOR_YELLOW    BGR(31, 31, 0)
+#define COLOR_AQUA      BGR(0, 31, 31)
+#define BLOCK_COLS 1
+#define BLOCK_ROWS 1
+#define BLOCK_TOP 10
+#define BLOCK_WIDTH 8
+#define BLOCK_HEIGHT 8
+#define BLOCK_NUM BLOCK_COLS * BLOCK_ROWS
+
+static struct box blocks[BLOCK_COLS][BLOCK_ROWS];
+static char flags[BLOCK_COLS][BLOCK_ROWS];
+static int num_blocks = BLOCK_NUM;
+static struct bullet enemy_bullet[BLOCK_COLS][BLOCK_ROWS];
+static int num_bullet[BLOCK_COLS][BLOCK_ROWS];
+static int vect[BLOCK_COLS][BLOCK_ROWS][2];
+
+static int updown, leftright, fast;
+static int go = 1;
+static int enemy_sprite;
+
+static struct fbox *ball;
+
+// 自機の弾
+extern struct bullet bullets[];
+
+static int hit(int x, int y)
+{
+	int i,j;
+	i = x / BLOCK_WIDTH;
+	j = (y - BLOCK_TOP) / BLOCK_HEIGHT;
+	if(i < 0 || j >= BLOCK_ROWS) return 0;
+	if(j < 0 || i >= BLOCK_COLS) return 0;
+	if(flags[i][j]) return 1;
+	return 0;
+}
+
+static void delete(int x, int y)
+{
+	int i, j;
+	i = x / BLOCK_WIDTH;
+        j = (y - BLOCK_TOP) /  BLOCK_HEIGHT;
+	draw_box(&blocks[i][j], blocks[i][j].x, blocks[i][j].y, COLOR_BLACK);
+	if(flags[i][j] == 1) {
+		num_blocks--;
+		flags[i][j] = 0;
+	}
+	
+}
+
+void block_step(int sprite_num)
+{
+	int i,j, bx, by, upleft, upright, downleft, downright;
+	enemy_sprite = sprite_num;
+	
+	switch (game_get_state()) {
+	case START:
+		for(i = 0; i < BLOCK_COLS; i++){
+			for(j = 0; j < BLOCK_ROWS; j++){
+				blocks[i][j].x = i * BLOCK_WIDTH;
+				blocks[i][j].y = j * BLOCK_HEIGHT + BLOCK_TOP;
+				blocks[i][j].width = BLOCK_WIDTH;
+				blocks[i][j].height = BLOCK_HEIGHT;
+				flags[i][j] = 1;
+//				draw_box(&blocks[i][j], blocks[i][j].x, blocks[i][j].y, COLOR_AQUA);
+				vect[i][j][0] = 1;
+				vect[i][j][1] = 1;
+				sprite_move(enemy_sprite, blocks[i][j].x, blocks[i][j].y);
+				sprite_display(enemy_sprite, OBJ_TURNON);
+			}
+		}
+		updown = 0;
+		leftright = 0;
+		fast = 1;
+	    break;
+	case RUNNING:
+		for(i = 0; i < BLOCK_COLS; i++){
+			for(j = 0; j < BLOCK_ROWS; j++){
+				if(blocks[i][j].x + blocks[i][j].y + vect[i][j][0] >= 240) vect[i][j][0] *= -1;
+				if(blocks[i][j].x + vect[i][j][0] <= 0) vect[i][j][0] *= -1;
+				blocks[i][j].x += vect[i][j][0];
+				sprite_move(enemy_sprite, blocks[i][j].x, blocks[i][j].y);
+			}
+		}
+		for(i = 0; i < MAX_BULLET; i++){
+			if(bullets[i].flag){
+				bx = bullets[i].bul.x;
+				by = bullets[i].bul.y;
+				updown = 0;
+				leftright = 0;
+				upleft = 0;
+				upright = 0;
+				downleft = 0;
+				downright = 0;
+				if( ( upleft = hit(bx, by)) ){
+					updown++;
+					leftright++;
+				}
+				if( ( upright = hit(bx + bullets[i].bul.width, by) ) ){
+					updown++;
+					leftright--;
+				}
+				if( ( downleft = hit(bx, by +  bullets[i].bul.height) ) ){
+					updown--;
+					leftright++;
+				}
+				if( ( downright = hit(bx +  bullets[i].bul.width, by +  bullets[i].bul.height) ) ){
+					updown--;
+					leftright--;
+				}
+
+				if( upleft ){
+					delete(bx, by);
+					hit_enemy(&bullets[i]);
+				}
+				if( upright ){
+					delete(bx +  bullets[i].bul.width, by);
+					hit_enemy(&bullets[i]);
+				}
+				if( downleft ){
+					delete(bx, by +  bullets[i].bul.height);
+					hit_enemy(&bullets[i]);
+				}
+				if( downright ){
+					delete(bx +  bullets[i].bul.width, by + bullets[i].bul.height);
+					hit_enemy(&bullets[i]);
+				}
+			}
+		}
+
+		if( num_blocks <= 0) game_set_state(CLEAR);
+		break;
+	case STOP:
+		break;
+	case DEAD:
+		break;
+	case RESTART:
+		for(i = 0; i < BLOCK_COLS; i++){
+                        for(j = 0; j < BLOCK_ROWS; j++){
+                                blocks[i][j].x = i * BLOCK_WIDTH;
+                                blocks[i][j].y = j * BLOCK_HEIGHT + BLOCK_TOP;
+                                blocks[i][j].width = BLOCK_WIDTH - 1;
+                                blocks[i][j].height = BLOCK_HEIGHT - 1;
+                                flags[i][j] = 1;
+                                draw_box(&blocks[i][j], blocks[i][j].x, blocks[i][j].y, COLOR_AQUA);
+                        }
+                }
+		num_blocks = BLOCK_NUM;
+		updown = 0;
+		leftright = 0;
+		fast = 1;
+		break;
+	case CLEAR:
+		break;
+	}
+}
