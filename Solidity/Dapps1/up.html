@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html>
+    <head><meta http-equiv="content-type" charset="utf-8"></head>
+    <body>
+		<form name="Test_form" action="test.html">
+        <div style="position: absolute; left: 800px" ><font color="green">アップロードページ</font> <font color="black"></font> </div>
+        <div id="networkid"></div>
+        <div id="accounts"></div>
+		<div id="money"></div>
+		<div id="list" style="position: absolute; left: 30px; top: 424px;"></div>
+		<div id="num_list" style="position: absolute; left: 10px; top: 400px;"></div>
+        <!-- 結果の出力先 -->
+		<input type="text" name="txhash_up" style="position: absolute; left: 350px; top: 100px; width: 600px; height: 30px" readonly>
+		<textarea name="sample_txt" style="position: absolute; left: 350px; top: 370px; width: 300px; height: 200px" readonly></textarea>
+        <img id="get_image" style="position: absolute; left: 660px; top: 370px;">
+        <!-- 入力ボックス　テキスト-->
+        <input type="text" placeholder="string_name, int_price" name="up_input" style="position: absolute; left: 10px; top: 100px; height: 30px; width: 220px">
+		<input type="text" placeholder="番号" name="textbox_get" style="position: absolute; left: 10px; top: 370px; height: 25px; width: 30px;">
+		<!-- 入力　ファイル及びファイル関連 -->
+		<select id="file_type" style="position: absolute; left: 10px; top: 140px; height: 30px;">
+			<option value="text">テキストファイル</option>
+			<option value="image">画像ファイル</option>
+		</select>
+        <input type="file" placeholder="up .txt" name="file_up" id="upper" accept="text/plain" style="position: absolute; left: 120px; top: 140px; height: 30px; width: 220px">
+        <input type="file" placeholder="up 画像" name="image_up" id="upper2" accept="image/*" style="position: absolute; left: 120px; top: 160px; height: 30px; width: 220px">
+		<!-- トランザクションの送信 or call するボタン -->
+		<a href="javascript:history.back()" style="position: absolute; left: 640px; top: 10px;">[戻る]</a>
+        <input type="button" value="アップロード" onclick="upContent()" style="position: absolute; left: 240px; top: 110px;">
+        <input type="button" value="表示(テキスト)" onclick="getContent()" style="position: absolute; left: 50px; top: 375px;">
+		<input type="button" value="表示(画像)" onclick="getImageContent()" style="position: absolute; left: 140px; top: 375px;">
+        <div style="position: absolute; left: 10px; top: 200px;">
+            <br>ファイルのアップロード方法<br>
+            (1) アップロードするファイルの選択(テキストか画像のみ)<br>
+            (2) ファイル名(拡張子含む), 最低販売価格 の順で入力<br>
+            (3) アップロードを押す<br>
+            <br>
+			アップロード済みのコンテンツ↓&nbsp;&nbsp;<input type="button" value="リストの更新" onclick="getContentsList()" >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;コンテンツ表示 テキスト↓ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 画像↓
+        </div>
+        <script src="https://code.jquery.com/jquery-3.4.0.min.js"></script>
+        <script>
+            if (typeof web3 !== 'undefined') {
+                web3 = new Web3(web3.currentProvider);
+                ethereum.enable();
+                
+                const address = '0xb595895f8ecd0afe73f9a7ae6818800b9e4b7a5f';
+
+                const abi =[
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "_addr",
+				"type": "address"
+			},
+			{
+				"name": "_pay",
+				"type": "uint256"
+			},
+			{
+				"name": "_name",
+				"type": "string"
+			}
+		],
+		"name": "buyContent",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"constant": false,
+		"inputs": [
+			{
+				"name": "_content",
+				"type": "string"
+			},
+			{
+				"name": "_name",
+				"type": "string"
+			},
+			{
+				"name": "_minprice",
+				"type": "uint256"
+			}
+		],
+		"name": "upContent",
+		"outputs": [],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"name": "_token",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"name": "content",
+				"type": "string"
+			},
+			{
+				"indexed": false,
+				"name": "minprice",
+				"type": "uint256"
+			}
+		],
+		"name": "UpContent",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"name": "saller",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"name": "pay",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"name": "name",
+				"type": "string"
+			}
+		],
+		"name": "BuyContent",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"name": "resaler",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"name": "original",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"name": "content",
+				"type": "string"
+			}
+		],
+		"name": "FindResale",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"name": "resaler",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"name": "original",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"name": "dept",
+				"type": "uint256"
+			}
+		],
+		"name": "GetDept",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"name": "depter",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"name": "payee",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"name": "dept",
+				"type": "uint256"
+			}
+		],
+		"name": "Repayment",
+		"type": "event"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "bytes32"
+			},
+			{
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "allow_list",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bool"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "address"
+			},
+			{
+				"name": "",
+				"type": "string"
+			}
+		],
+		"name": "content_from_name",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "address"
+			},
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "contents",
+		"outputs": [
+			{
+				"name": "",
+				"type": "string"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"name": "contents_owner",
+		"outputs": [
+			{
+				"name": "",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "address"
+			},
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "creditor",
+		"outputs": [
+			{
+				"name": "",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "address"
+			},
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "depts",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "getbalanceOf",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "_addr",
+				"type": "address"
+			},
+			{
+				"name": "_num",
+				"type": "uint256"
+			}
+		],
+		"name": "getContent",
+		"outputs": [
+			{
+				"name": "",
+				"type": "string"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "_var",
+				"type": "string"
+			}
+		],
+		"name": "getHash",
+		"outputs": [
+			{
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"payable": false,
+		"stateMutability": "pure",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "_addr",
+				"type": "address"
+			},
+			{
+				"name": "_num",
+				"type": "uint256"
+			}
+		],
+		"name": "getInfo",
+		"outputs": [
+			{
+				"name": "",
+				"type": "string"
+			},
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "_addr",
+				"type": "address"
+			}
+		],
+		"name": "getNumContents",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "getSallers",
+		"outputs": [
+			{
+				"name": "",
+				"type": "address[]"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "bytes32"
+			}
+		],
+		"name": "minprice",
+		"outputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "address"
+			},
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "names",
+		"outputs": [
+			{
+				"name": "",
+				"type": "string"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [
+			{
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "saller",
+		"outputs": [
+			{
+				"name": "",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"constant": true,
+		"inputs": [],
+		"name": "token",
+		"outputs": [
+			{
+				"name": "",
+				"type": "address"
+			}
+		],
+		"payable": false,
+		"stateMutability": "view",
+		"type": "function"
+	}
+]
+                // コンストラクトのインスタンスを生成
+                const mycontract = web3.eth.contract(abi).at(address);
+				var account;
+
+				// アカウントおよびネットワークに関する情報を表示
+				web3.version.getNetwork((error, result) => {
+                    $('#networkid').text('Network ID: '+result)
+                })
+  
+                web3.eth.getAccounts((error, result) => {
+					account = result[0]
+                    $('#accounts').text('Your accounts: '+account)
+					mycontract.getbalanceOf.call({from: account, gas:3000000},(error2, result2) =>{
+						$('#money').text('Your money: '+result2 + 'oc')
+                    });
+                })
+				
+				if(document.getElementById("file_type").value == "text"){
+					document.getElementById("upper").disabled = false;
+					document.getElementById("upper2").disabled = true;
+				}else{
+					document.getElementById("upper").disabled = true;
+					document.getElementById("upper2").disabled = false;
+				}
+
+				// あるアドレス(出品者)のコンテンツリスト
+				getContentsList();
+
+                // ファイル入力　テキスト
+                var text_content;
+                document.getElementById("upper").addEventListener("change", function(evt){
+                    var content_file = evt.target.files;
+                    var reader = new FileReader();
+                    reader.readAsText(content_file[0]);
+                    reader.addEventListener("load", function(){
+                        text_content = reader.result;
+                    })
+                })
+
+                // ファイル入力 画像
+                var image_content;
+                document.getElementById("upper2").addEventListener("change", function(evt){
+                    var content_file = evt.target.files;
+                    var reader = new FileReader();
+                    reader.onload = function(){
+                        // Data URIを取得
+                        image_content = this.result;
+                    }
+                    reader.readAsDataURL(content_file[0]);
+                })
+
+                // コンテンツのアップロード(text)
+				function upTextContent(){
+					var inputs = Test_form.up_input.value.split(",");
+					if(Number(inputs[1]) < 0){
+						Test_form.txhash_up.value = '0以上の値段設定にして下さい'
+						return;
+					}
+                    web3.eth.getAccounts((error, result) => {
+                    	mycontract.upContent.sendTransaction(text_content,inputs[0],inputs[1],{from: account, gas:6000000},(error2, result2) =>{
+					        Test_form.txhash_up.value = 'Tx hash: '+result2
+                    	});
+                	})
+                }
+
+                // コンテンツのアップロード(image)
+                function upImageContent(){
+                    var inputs = Test_form.up_input.value.split(",");
+					if(inputs[1] < 0){
+						Test_form.txhash_up.value = '0以上の値段設定にして下さい'
+						return;
+					}
+                    web3.eth.getAccounts((error, result) => {
+                    	mycontract.upContent.sendTransaction(image_content,inputs[0],inputs[1],{from: account, gas:6900000, gasPrice:600000000000},(error2, result2) =>{
+					        Test_form.txhash_up.value = 'Tx hash: '+result2
+                    	});
+                	})
+                }
+
+				function upContent(){
+					var ftype = document.getElementById("file_type").value;
+					if (ftype == "text"){
+						upTextContent();
+					}else{
+						upImageContent();
+					}
+				}
+
+				// コンテンツの取得(テキスト)
+                function getContent(){
+					Test_form.get_image.src ="";
+                    var num = Test_form.textbox_get.value;
+                    web3.eth.getAccounts((error, result) => {
+                    	mycontract.getContent.call(account, Number(num),{from: account, gas:3000000},(error2, result2) =>{
+							if(error2) Test_form.get_content.value = error2
+							Test_form.sample_txt.value=result2
+                    	});
+                	}) 
+                }
+
+				//コンテンツの取得(画像)
+                function getImageContent(){
+					Test_form.sample_txt.value=""
+                    var num = Test_form.textbox_get.value
+                    web3.eth.getAccounts((error, result) => {
+                    	mycontract.getContent.call(account, Number(num),{from: account, gas:3000000},(error2, result2) =>{
+							Test_form.get_image.src = result2
+                    	});
+                	}) 
+                }
+
+				function getContentsList(){
+					var input;
+					document.getElementById("num_list").innerHTML = "";
+					document.getElementById("list").innerHTML ="";
+					web3.eth.getAccounts((error, result) => {
+						input = account;
+						mycontract.getNumContents.call(input, {from: account, gas:3000000},(error2, result2) =>{
+							document.getElementById("num_list").innerHTML += 'ID  ファイル名　最低価格<br>'
+							for(var i = 0; i < result2; i++){
+								document.getElementById("num_list").innerHTML += i + ' <br>'
+								mycontract.getInfo.call(input, i, {from: account, gas:3000000},(error3, result3) =>{
+									var name,  price;
+									[name, price] = result3;
+									document.getElementById("list").innerHTML += ''+ name + ' '+ price + 'oc<br>';
+									for(var j = 0;j < result2 * 150; j++){} // 待機時間
+								})
+							}
+						})
+					})
+				}
+		
+
+				// ページの更新
+				function reloadFunctions(){
+					// アカウント・お金の更新
+					web3.eth.getAccounts((error, result) => {
+						if (account != result[0]){
+							window.location.href = 'sale.html';
+						}
+						account = result[0]
+    	                $('#accounts').text('Your accounts: '+account)
+						mycontract.getbalanceOf.call({from: account, gas:3000000},(error2, result2) =>{
+							$('#money').text('Your money: '+result2 + 'oc')
+                	    });
+
+					// ファイル入力の更新
+					if(document.getElementById("file_type").value == "text"){
+						document.getElementById("upper").disabled = false;
+						document.getElementById("upper2").disabled = true;
+					}else{
+						document.getElementById("upper").disabled = true;
+						document.getElementById("upper2").disabled = false;
+					}
+                	})
+				}
+
+				setInterval('reloadFunctions()',100);
+            } else {
+                document.write('Install <a href="https://metamask.io">METAMASK</a>')
+            }
+		</script>
+		</form>
+    </body>
+</html>
