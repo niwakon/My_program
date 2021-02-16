@@ -4,6 +4,15 @@ Webで操作するクトゥルフ神話TRPGのシナリオ管理アプリ
 
 ブラウザ(PHP)を介してDBを操作する
 
+### シナリオの登録
+![登録](https://user-images.githubusercontent.com/25600727/108032472-e0353500-7075-11eb-87d5-f0f4c1ed97d2.gif)
+
+### テーブル表示画面(ソート付き)
+![ソート](https://user-images.githubusercontent.com/25600727/108032736-49b54380-7076-11eb-8acd-e3486ddd3b0f.gif)
+
+### テーブルから行の削除
+![削除](https://user-images.githubusercontent.com/25600727/108032833-6baec600-7076-11eb-9023-7c093c8b9ce4.gif)
+
 ## showTRPG.php
 
 　DBからテーブルを取得して表示(メインページ)
@@ -34,3 +43,9 @@ Webで操作するクトゥルフ神話TRPGのシナリオ管理アプリ
 
  よく使う処理を関数としてまとめたもの。
  テーブルの表示など
+
+## 今後追加予定
+・テーブルの編集でPL, KP回数を増やせるようにする
+
+・シナリオ追加の画面などのUI周り
+ふや
