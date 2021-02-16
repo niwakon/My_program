@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <a href="./firmware.txt" download="firmware.txt">
+            firmware.txt
+        </a>
+        <script>
+            var a = 3
+            var b = 2
+            var c = a + b * 4
+        </script>
+    </body>
+</html>
