@@ -1,20 +1,23 @@
-pragma solidity ^0.5.12;
+pragma solidity ^0.7.0;
 
-contract Update_mager{
+contract New_Update_mager{
     
     mapping(address=>UpLog_ven[]) public log_ven; // vendorのリリースログ
     mapping(address=>UpLog_IoT[]) public log_update; // IoTのアップデートログ, 鍵で個別認証
     mapping(string=>uint256) public version; // デバイスの最新バージョン
     mapping(string=>mapping(uint256=>bytes32)) public firmware;
     mapping(string=>mapping(uint256=>string[])) public URL; // リポジトリの一覧
+    mapping(bytes32=>mapping(address=>bool)) public distributors; //正式な配布者であるかどうか
     mapping(string=>address) public eth_addr_URL; // URL に対応した ethreumアドレス
     mapping(address=>string) public list_device; // modelに対応したdevice 公開鍵->model名
-    mapping(address=>mapping(uint256=>uint256)) public done_update; // update済みかどうか 公開鍵->ver->0 or 1
+    mapping(address=>mapping(uint256=>bool)) public done_update; // update済みかどうか 公開鍵->ver->0 or 1
     mapping(string=>uint) public num_device; // デバイス数
     mapping(bytes32=>uint) public reward; //アップデート報酬(合計) H(firmware) -> 
     mapping(bytes32=>uint) public reward_pay; //アップデート報酬(支払い) H(frimware) -> 
     mapping(string=>address) public vendor; // modelに対応したvendorアドレス
     mapping(bytes32=>uint256) public period; // 報酬の配布期間 H(firmware) -> timestamp
+    
+    mapping(address=>int256) public evaluation; // デバイスの評価
     
     struct UpLog_ven{
         string model;
@@ -33,6 +36,7 @@ contract Update_mager{
     event RegistURL(address indexed distributer, string URL, string model, uint256 ver);
     event NewVer(address indexed vendor, string model, uint256 indexed ver, bytes32 hash);
     event ReportUpdate(address indexed device, address indexed distributor, string model, uint256 ver, bytes32 hash_u);
+    event ReportFraud(address indexed device, address indexed distributor);
     
     constructor() public {}
     
@@ -96,8 +100,10 @@ contract Update_mager{
         require(verifyDistributor(vendor[_model], sign, h_u));
         URL[_model][_ver].push(_url);
         eth_addr_URL[_url] = msg.sender;
+        // 配布者が正当であることを記録
+        distributors[h_u][msg.sender] = true;
         emit RegistURL(msg.sender, _url, _model, _ver);
-    }
+     }
     
     // solidity で乱数できないので乱数渡す
     function getURL(string memory _model, uint256 _ver, uint256 num) public view returns (string memory, address){
@@ -126,16 +132,17 @@ contract Update_mager{
 
     // device が アップデート済 か調べる
     function checkDevice(address pk_d, uint256 ver) public view returns(bool){
-       return(done_update[pk_d][ver] == 0);
+       return(done_update[pk_d][ver]);
     }
     
     // アップデート報告 署名検証 + 報酬付与
-    function reportUpdate(string memory model, uint256 ver, bytes memory signature, address pk_d, uint256 ts) public payable{
+    function reportUpdate(string memory model, uint256 ver, bytes memory signature, address pk_d, uint256 ts) public{
         bytes32 h_u = firmware[model][ver];
+        require(distributors[h_u][msg.sender]); // 正式な配布者であるかどうか
         bool check = verify_Update3(model, ver, pk_d, signature, h_u, ts);
         require(check); // 署名が正しいかどうか
         require(getHash(model) == getHash(list_device[pk_d])); // アップデート対象かどうか
-        require(done_update[pk_d][ver] == 0); // まだアップデートしていないことの確認
+        require(!done_update[pk_d][ver]); // まだアップデートしていないことの確認
         // 報酬が残っており署名をもらってから１時間以内であれば報酬を支払う
         if(reward[h_u] >= reward_pay[h_u] && block.timestamp <= (ts + 1 hours)){
             // 報酬支払い
@@ -143,11 +150,27 @@ contract Update_mager{
             reward[h_u] -= reward_pay[h_u];
         }
         // アップデートログ生成
-        done_update[pk_d][ver] = 1;
+        done_update[pk_d][ver] = true;
         UpLog_IoT memory ulog = UpLog_IoT(msg.sender, model, ver, h_u);
         log_update[pk_d].push(ulog);
         
         emit ReportUpdate(pk_d, msg.sender, model, ver, h_u);
+    }
+    
+    // デバイスの不正を報告
+    function reportFraud(bytes memory signature, uint256 ver, bytes32 hash, address pk_i, uint256 indexNum, uint256 ts) public payable{
+        // 報酬が支払われずみか(アップデート済みか)
+        require(done_update[pk_i][ver]);
+        //署名が配布者(送信者)に向けたダウンロードリクエストであるか
+        require(verifyFraud(signature, ver, hash, pk_i, ts));
+        //報酬の支払い相手が送信者でない
+        address pay_addr = log_update[pk_i][indexNum].distributor;
+        require(pay_addr != msg.sender);
+        // 署名が有効時間内か
+        require(block.timestamp <= (ts + 1 hours));
+        //評判を下げる
+        evaluation[pk_i] -= 1;
+        emit ReportFraud(pk_i, msg.sender);
     }
     
     function verifyDistributor(address _vendor,bytes memory signature, bytes32 h_u) public view returns(bool){
@@ -160,6 +183,19 @@ contract Update_mager{
         bytes32 message = prefixed(keccak256(abi.encodePacked(msg.sender, model, ver, h_u, ts)));
         return (recoverSigner(message, signature) == pk_d);
     }
+    
+    function verifyFraud(bytes memory signature, uint256 ver, bytes32 h_u, address pk_i, uint256 ts) public view returns(bool){
+        // this recreates the message that was signed on the client
+        bytes32 message = prefixed(keccak256(abi.encodePacked(msg.sender, ver, h_u, ts)));
+        return (recoverSigner(message, signature) == pk_i);
+    }
+    
+    /* 署名検証
+    function verify_sig(uint256  M, bytes memory signature, bytes memory pk_d) public pure returns(bool){
+        address device = calculateAddress(pk_d);
+        bytes32 message = prefixed(keccak256(abi.encodePacked(M)));
+        return recoverSigner(message, signature)==device;
+    }*/
     
     /// signature methods.
     function splitSignature(bytes memory sig) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
